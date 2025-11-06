@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        Int       @id @default(autoincrement())
+  name      String
+  createdAt DateTime  @default(now())
+
+  users     User[]
+  products  Product[]
+  customers Customer[]
+  orders    Order[]
+  blogPosts BlogPost[]
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  tenantId   Int
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  name       String
+  email      String
+  phone      String
+  password   String
+  role       String   @default("seller")
+  createdAt  DateTime @default(now())
+
+  products   Product[]
+  blogPosts  BlogPost[]
+
+  @@unique([tenantId, email])
+}
+
+model Product {
+  id                Int      @id @default(autoincrement())
+  tenantId          Int
+  userId            Int
+  name              String
+  description       String
+  photoUrl          String?
+  quantityAvailable Int
+  contactNumber     String
+  price             Float    // 🔹 Nuevo campo agregado
+  createdAt         DateTime @default(now())
+
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+  user              User     @relation(fields: [userId], references: [id])
+  orderItems        OrderItem[]
+}
+
+model Customer {
+  id         Int      @id @default(autoincrement())
+  tenantId   Int
+  name       String
+  email      String   @unique
+  password   String
+  createdAt  DateTime @default(now())
+
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  orders     Order[]
+}
+
+model Order {
+  id           Int      @id @default(autoincrement())
+  tenantId     Int
+  customerId   Int
+  status       String
+  totalAmount  Float
+  createdAt    DateTime @default(now())
+
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  customer     Customer @relation(fields: [customerId], references: [id])
+  items        OrderItem[]
+  payment      Payment?
+}
+
+model OrderItem {
+  id         Int      @id @default(autoincrement())
+  orderId    Int
+  productId  Int
+  quantity   Int
+  unitPrice  Float
+
+  order      Order    @relation(fields: [orderId], references: [id])
+  product    Product  @relation(fields: [productId], references: [id])
+}
+
+model Payment {
+  id             Int      @id @default(autoincrement())
+  orderId        Int      @unique
+  amount         Float
+  paymentMethod  String
+  paymentStatus  String
+  paidAt         DateTime
+
+  order          Order    @relation(fields: [orderId], references: [id])
+}
+
+model BlogPost {
+  id          Int       @id @default(autoincrement())
+  tenantId    Int
+  userId      Int
+  title       String
+  description String
+  imageUrl    String?
+  createdAt   DateTime  @default(now())
+
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+  categories  Category[] @relation("PostCategories")
+  tags        Tag[]      @relation("PostTags")
+}
+
+model Category {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  posts     BlogPost[] @relation("PostCategories")
+}
+
+model Tag {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  posts     BlogPost[] @relation("PostTags")
+}
